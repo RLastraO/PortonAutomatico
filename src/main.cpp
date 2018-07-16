@@ -1,18 +1,21 @@
 #include <Arduino.h>
 
-#define ABIERTO 1
-#define CERRADO 0
-const int relay1Input1 = 7; //Pin control relay 1
-const int relay1Input2 = 6; //Pin control relay 2
-const int relay1Input3 = 5; //Pin control relay 3
-const int relay1Input4 = 4; //Pin control relay 4
+#define DETENIDO 0
+#define ABRIENDO 1
+#define CERRANDO 2
+
+const int relay1Input1 = 7; //Pin control relay 1 , power source actuador cerradura.
+const int relay1Input2 = 6; //Pin control relay 2 , power source actuador baliza.
+const int relay1Input3 = 5; //Pin control relay 3 , power source actuador 1 porton.
+const int relay1Input4 = 4; //Pin control relay 4 , power source actuador 2 porton.
 int pin_control = 2; //Pin control interrupciones
 
 int estado_pin_control;
 bool portonLow;
 bool portonHigh;
 bool portonChange;
-int estado_porton;
+int estado_actual;
+int estado_anterior;
 
 void ServicioPortonChange() 
 {
@@ -21,12 +24,11 @@ void ServicioPortonChange()
 
 void setup() {
     // put your setup code here, to run once:
-      
     Serial.begin(9600);
     attachInterrupt( 0, ServicioPortonChange, CHANGE);
     portonChange = false;
     estado_pin_control = LOW;
-    estado_porton = CERRADO;
+    estado_actual = DETENIDO;
     pinMode(relay1Input1, OUTPUT);
     pinMode(relay1Input2, OUTPUT);
     pinMode(relay1Input3, OUTPUT);
@@ -47,14 +49,16 @@ void loop() {
 
 void actuar()
 {
-    switch (estado_porton){
-        case ABIERTO:
-            digitalWrite(relay1Input1, HIGH);
-            digitalWrite(relay1Input2, HIGH);  
+    digitalWrite(relay1Input2, HIGH); // Baliza, operando mientras opera actuador.
+    digitalWrite(relay1Input1, HIGH); // Se opera cerradura a 12 volts.
+    delay(2000); // Se espera 2 segundo para asegurar apertura de cerradura.
+    
+    switch (estado_anterior)
+    {
+        case ABRIENDO:
             digitalWrite(relay1Input3, HIGH);
-            estado_porton = CERRADO;
             break;
-        case CERRADO:
+        case CERRANDO:
             digitalWrite(relay1Input1, HIGH);
             digitalWrite(relay1Input2, HIGH);  
             digitalWrite(relay1Input3, HIGH);
@@ -66,20 +70,6 @@ void actuar()
 
 void parar()
 {
-    switch (estado_porton)
-    {
-        case ABIERTO:
-            digitalWrite(relay1Input1, LOW);
-            digitalWrite(relay1Input2, HIGH);  
-            digitalWrite(relay1Input3, HIGH);
-            estado_porton = CERRADO;
-            break;
-        case CERRADO:
-            digitalWrite(relay1Input1, HIGH);
-            digitalWrite(relay1Input2, HIGH);  
-            digitalWrite(relay1Input3, HIGH);
-            break;
-        default:
-            break;
-    }
+    digitalWrite(relay1Input2, LOW); // Baliza, operando mientras opera actuador.
+    estado_actual = DETENIDO;
 }
